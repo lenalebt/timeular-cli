@@ -7,14 +7,18 @@ scalaVersion := "2.13.1"
 //TODO: there is more; debian, windows, ...
 enablePlugins(DockerPlugin)
 
-val catsVersion = "2.0.0"
+val catsVersion  = "2.0.0"
+val circeVersion = "0.12.3"
 libraryDependencies ++= Seq(
-  "org.typelevel" %% "cats-core" % catsVersion,
-  "org.typelevel" %% "cats-macros" % catsVersion,
-  "org.typelevel" %% "cats-kernel" % catsVersion,
-  "org.typelevel" %% "cats-laws" % catsVersion,
-  "com.typesafe" % "config" % "1.4.0",
-  "org.apache.poi" % "poi" % "4.1.1" //for editing excel files
+  "org.typelevel"  %% "cats-core"     % catsVersion,
+  "org.typelevel"  %% "cats-macros"   % catsVersion,
+  "org.typelevel"  %% "cats-kernel"   % catsVersion,
+  "org.typelevel"  %% "cats-laws"     % catsVersion,
+  "io.circe"       %% "circe-core"    % circeVersion,
+  "io.circe"       %% "circe-generic" % circeVersion,
+  "io.circe"       %% "circe-parser"  % circeVersion,
+  "com.typesafe"   % "config"         % "1.4.0",
+  "org.apache.poi" % "poi"            % "4.1.1" //for editing excel files
 )
 
 //test dependencies
