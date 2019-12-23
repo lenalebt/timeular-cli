@@ -3,19 +3,16 @@ package de.lenabrueder.timeular.api
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import play.api.Logger
-import play.api.http.HeaderNames
-import play.api.libs.json.JsonNaming.SnakeCase
+import com.typesafe.scalalogging.StrictLogging
+import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.libs.json.JsonConfiguration
-import play.api.libs.ws.WSClient
-import play.api.libs.ws.WSRequest
+import play.api.libs.ws.JsonBodyReadables._
+import play.api.libs.ws.JsonBodyWritables._
+import play.api.libs.ws.StandaloneWSClient
+import play.api.libs.ws.StandaloneWSRequest
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import play.api.libs.ws.JsonBodyReadables._
-import play.api.libs.ws.JsonBodyWritables._
-import utils.StrictLogging
 
 //see timeular API at https://developers.timeular.com/public-api/
 
@@ -99,7 +96,7 @@ object CurrentTracking {
 
 class TimeularApiClient(
     val baseUrl: String
-)(implicit ws: WSClient, executionContext: ExecutionContext)
+)(implicit ws: StandaloneWSClient, executionContext: ExecutionContext)
     extends StrictLogging {
   def login(credentials: SigninRequest): Future[LoggedInTimeularApiClient] =
     for {
@@ -107,25 +104,26 @@ class TimeularApiClient(
                    .url(s"$baseUrl/developer/sign-in")
                    .post(Json.toJson(credentials))
     } yield {
-      val token = response.json.as[AccessToken]
+      val token = response.body[JsValue].as[AccessToken]
       LoggedInTimeularApiClient(token)
     }
 }
 object TimeularApiClient {
   val baseUrl = "https://api.timeular.com/api/v2"
 
-  def apply(baseUrl: String = baseUrl)(implicit ws: WSClient, executionContext: ExecutionContext): TimeularApiClient =
+  def apply(baseUrl: String = baseUrl)(implicit ws: StandaloneWSClient,
+                                       executionContext: ExecutionContext): TimeularApiClient =
     new TimeularApiClient(baseUrl)
 }
 class LoggedInTimeularApiClient(
     val accessToken: AccessToken,
     val baseUrl: String
-)(implicit ws: WSClient, executionContext: ExecutionContext)
+)(implicit ws: StandaloneWSClient, executionContext: ExecutionContext)
     extends StrictLogging {
   val dateTimeFormatter =
     DateTimeFormatter.ofPattern("YYYY-MM-dd'T'HH:mm:ss.SSS")
-  implicit class WithAuth(val ws: WSRequest) {
-    def withAuth() = ws.withHttpHeaders(HeaderNames.AUTHORIZATION -> s"Bearer ${accessToken.token}")
+  implicit class WithAuth(val ws: StandaloneWSRequest) {
+    def withAuth() = ws.withHttpHeaders("Authorization" -> s"Bearer ${accessToken.token}")
   }
 
   def timeEntries(
@@ -139,7 +137,7 @@ class LoggedInTimeularApiClient(
                    .get()
     } yield {
       logger.warn(s"response: ${response.body}")
-      (response.json \ "timeEntries").as[Seq[TimeEntry]]
+      (response.body[JsValue] \ "timeEntries").as[Seq[TimeEntry]]
     }
   }
 
@@ -147,7 +145,7 @@ class LoggedInTimeularApiClient(
     for {
       response <- ws.url(s"$baseUrl/time-entries/$id").withAuth().get()
     } yield {
-      response.json.as[TimeEntry]
+      response.body[JsValue].as[TimeEntry]
     }
 
   def currentTracking(): Future[Option[CurrentTracking]] =
@@ -155,13 +153,13 @@ class LoggedInTimeularApiClient(
       response <- ws.url(s"$baseUrl/tracking").withAuth().get()
     } yield {
       logger.warn(s"${response.body}")
-      (response.json \ "currentTracking").asOpt[CurrentTracking]
+      (response.body[JsValue] \ "currentTracking").asOpt[CurrentTracking]
     }
 }
 
 object LoggedInTimeularApiClient {
   def apply(accessToken: AccessToken, baseUrl: String = TimeularApiClient.baseUrl)(
-      implicit ws: WSClient,
+      implicit ws: StandaloneWSClient,
       executionContext: ExecutionContext): LoggedInTimeularApiClient =
     new LoggedInTimeularApiClient(accessToken, baseUrl)
 }
