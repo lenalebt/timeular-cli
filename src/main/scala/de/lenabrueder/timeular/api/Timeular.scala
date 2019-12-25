@@ -13,6 +13,7 @@ import play.api.libs.ws.StandaloneWSRequest
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 //see timeular API at https://developers.timeular.com/public-api/
 
@@ -44,7 +45,9 @@ object Activity {
 case class Duration(
     startedAt: LocalDateTime,
     stoppedAt: LocalDateTime
-)
+) {
+  lazy val asJavaDuration: java.time.Duration = java.time.Duration.between(startedAt, stoppedAt)
+}
 object Duration {
   implicit val format = Json.format[Duration]
 }
