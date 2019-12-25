@@ -1,14 +1,21 @@
 package de.lenabrueder.timeular.cli
 
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 import scopt.Read
 
+import scala.util.Try
+
 object ProgramOptionParser extends ((Array[String], Map[String, String]) => Option[Config]) {
   implicit val localDateTimeRead: Read[LocalDateTime] = new Read[LocalDateTime] {
-    override def arity: Int                     = 5
-    override def reads: String => LocalDateTime = LocalDateTime.parse
+    override def arity: Int = 5
+    override def reads: String => LocalDateTime =
+      x =>
+        Try(LocalDateTime.parse(x))
+          .orElse(Try(LocalDate.parse(x).atStartOfDay()))
+          .get
   }
   override def apply(cliArgs: Array[String], envArgs: Map[String, String]): Option[Config] = {
     import scopt.OParser
@@ -44,8 +51,10 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
           .text("stop tracking an activity")
           .children(
             opt[LocalDateTime]("startTime")
+              .action((x, c) => c.copy(startTime = Some(x)))
               .text("Start time of when the export starts."),
             opt[LocalDateTime]("endTime")
+              .action((x, c) => c.copy(endTime = Some(x)))
               .text("End time of when the export ends.")
           )
       )

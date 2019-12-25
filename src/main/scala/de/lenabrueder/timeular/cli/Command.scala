@@ -44,7 +44,7 @@ object Command {
         config.outputOptions.file match {
           case Some(file) =>
             val outputStream = new BufferedOutputStream(new FileOutputStream(file))
-            outputData.map(outputStream.write)
+            outputData.map(outputStream.write).map(_ => outputStream.close())
           case None => outputData.map(println)
         }
     }

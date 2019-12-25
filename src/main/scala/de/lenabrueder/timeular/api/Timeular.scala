@@ -139,7 +139,6 @@ class LoggedInTimeularApiClient(
                    .withAuth()
                    .get()
     } yield {
-      logger.warn(s"response: ${response.body}")
       (response.body[JsValue] \ "timeEntries").as[Seq[TimeEntry]]
     }
   }
@@ -155,7 +154,6 @@ class LoggedInTimeularApiClient(
     for {
       response <- ws.url(s"$baseUrl/tracking").withAuth().get()
     } yield {
-      logger.warn(s"${response.body}")
       (response.body[JsValue] \ "currentTracking").asOpt[CurrentTracking]
     }
 }

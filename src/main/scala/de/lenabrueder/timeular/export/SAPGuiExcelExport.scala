@@ -37,7 +37,7 @@ object SAPGuiExcelExport {
 
   def create(entries: Seq[TimeEntry]) = {
     val workbook = new HSSFWorkbook()
-    val groups   = groupedByWeek(entries).mapValues(groupedByDay)
+    val groups   = groupedByWeek(entries).view.mapValues(groupedByDay).toMap
     for { (week, groupedByWeek) <- groups } {
       val sortedDaysInWeek = groupedByWeek.keySet.toSeq.sorted
       val firstDayOfWeek   = sortedDaysInWeek.head.minusDays(sortedDaysInWeek.head.getDayOfWeek.ordinal())
