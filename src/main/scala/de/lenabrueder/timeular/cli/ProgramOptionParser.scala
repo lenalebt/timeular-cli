@@ -26,13 +26,13 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
       OParser.sequence(
         programName("timeular-cli"),
         head("timeular-cli", "1.0-SNAPSHOT"),
-        opt[String]("apiKey")
+        opt[String]("api-key")
           .action((x, c) => c.copy(apiKey = Some(x)))
           .text("The timeular API key."),
-        opt[String]("apiSecret")
+        opt[String]("api-secret")
           .action((x, c) => c.copy(apiSecret = Some(x)))
           .text("The timeular API secret."),
-        opt[String]("apiServer")
+        opt[String]("api-server")
           .action((x, c) => c.copy(timeularServer = Some(x)))
           .text("The timeular API server."),
         opt[String]('f', "output-format")
@@ -51,10 +51,10 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
           .action((x, c) => c.copy(command = Some("export")))
           .text("stop tracking an activity")
           .children(
-            opt[LocalDateTime]("startTime")(localDateTimeRead(false))
+            opt[LocalDateTime]("start-time")(localDateTimeRead(false))
               .action((x, c) => c.copy(startTime = Some(x)))
               .text("Start time of when the export starts."),
-            opt[LocalDateTime]("endTime")(localDateTimeRead(true))
+            opt[LocalDateTime]("end-time")(localDateTimeRead(true))
               .action((x, c) => c.copy(endTime = Some(x)))
               .text("End time of when the export ends.")
           )

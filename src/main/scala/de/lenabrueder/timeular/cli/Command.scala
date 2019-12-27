@@ -38,7 +38,7 @@ object Command {
           data   <- client.timeEntries(startTime, endTime)
         } yield data
         val outputData = config.outputOptions.`type` match {
-            //TODO: allow for some kind of plugin system? or just very nicely configurable output?
+          //TODO: allow for some kind of plugin system? or just very nicely configurable output?
           case "xls" => data.map { SAPGuiExcelExport.create }
         }
 

@@ -8,4 +8,6 @@ report your working time.
 
 # how to run
 
-```sbt run export -o test.xls --startTime 2019-12-02 --endTime 2019-12-20```
+```sbt run export -o test.xls --start-time 2019-12-02 --end-time 2019-12-20```
+
+either set the `TIMEULAR_API_KEY` and `TIMEULAR_API_SECRET` environment variables, or supply `--api-key` or `--api-secret` cli params.
