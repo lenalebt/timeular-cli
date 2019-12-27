@@ -35,5 +35,7 @@ libraryDependencies ++= Seq(
   "com.github.alexarchambault" %% "scalacheck-shapeless_1.14" % "1.2.3"
 ).map(_ % "test")
 
+fork in run := true
+
 dockerBaseImage := "openjdk:11"
 dockerUpdateLatest := true

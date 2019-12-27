@@ -21,6 +21,7 @@ object Main extends App with StrictLogging {
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
   implicit val system = ActorSystem()
+  //the documentation says we should have this, but having this will keep the application in a stale state when run from SBT
   system.registerOnTermination {
     System.exit(0)
   }

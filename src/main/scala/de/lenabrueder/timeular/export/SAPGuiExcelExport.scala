@@ -4,15 +4,15 @@ import java.io.ByteArrayOutputStream
 import java.time.DayOfWeek
 import java.time.LocalTime
 
+import com.typesafe.scalalogging.StrictLogging
 import de.lenabrueder.timeular.api.TimeEntry
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
-
 import de.lenabrueder.timeular.filters.Filters._
 
 /**
   * Exports to Excel in the format the SAP GUI wants to see
   */
-object SAPGuiExcelExport {
+object SAPGuiExcelExport extends StrictLogging {
 
   import scala.concurrent.duration._
 

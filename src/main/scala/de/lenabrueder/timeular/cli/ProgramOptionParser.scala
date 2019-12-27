@@ -9,13 +9,14 @@ import scopt.Read
 import scala.util.Try
 
 object ProgramOptionParser extends ((Array[String], Map[String, String]) => Option[Config]) {
-  implicit val localDateTimeRead: Read[LocalDateTime] = new Read[LocalDateTime] {
+  implicit def localDateTimeRead(useEndOfDay: Boolean): Read[LocalDateTime] = new Read[LocalDateTime] {
     override def arity: Int = 5
     override def reads: String => LocalDateTime =
       x =>
-        Try(LocalDateTime.parse(x))
-          .orElse(Try(LocalDate.parse(x).atStartOfDay()))
-          .get
+        Try(LocalDateTime.parse(x)).orElse {
+          lazy val date = LocalDate.parse(x).atStartOfDay()
+          Try(if (useEndOfDay) { date.plusDays(1).minusSeconds(1) } else { date })
+        }.get
   }
   override def apply(cliArgs: Array[String], envArgs: Map[String, String]): Option[Config] = {
     import scopt.OParser
@@ -50,10 +51,10 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
           .action((x, c) => c.copy(command = Some("export")))
           .text("stop tracking an activity")
           .children(
-            opt[LocalDateTime]("startTime")
+            opt[LocalDateTime]("startTime")(localDateTimeRead(false))
               .action((x, c) => c.copy(startTime = Some(x)))
               .text("Start time of when the export starts."),
-            opt[LocalDateTime]("endTime")
+            opt[LocalDateTime]("endTime")(localDateTimeRead(true))
               .action((x, c) => c.copy(endTime = Some(x)))
               .text("End time of when the export ends.")
           )
