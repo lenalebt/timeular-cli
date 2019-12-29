@@ -21,7 +21,6 @@ libraryDependencies ++= Seq(
   "io.circe"                     %% "circe-parser"   % circeVersion,
   "com.softwaremill.sttp.client" %% "core"           % sttpVersion,
   "com.softwaremill.sttp.client" %% "circe"          % sttpVersion,
-  "com.typesafe.play"            %% "play-json"      % "2.8.1",
   "com.typesafe.scala-logging"   %% "scala-logging"  % "3.9.2",
   "com.github.scopt"             %% "scopt"          % "4.0.0-RC2",
   "ch.qos.logback"               % "logback-classic" % "1.2.3",

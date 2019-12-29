@@ -3,9 +3,15 @@ package de.lenabrueder.timeular.api
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
-import play.api.libs.json.Json
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
+import io.circe.syntax._
 import sttp.client._
+import sttp.client.circe._
 
 //see timeular API at https://developers.timeular.com/public-api/
 
@@ -14,14 +20,16 @@ case class SigninRequest(
     apiSecret: String
 )
 object SigninRequest {
-  implicit val format = Json.format[SigninRequest]
+  implicit val decoder: io.circe.Decoder[SigninRequest] = deriveDecoder
+  implicit val encoder: io.circe.Encoder[SigninRequest] = deriveEncoder
 }
 
 case class AccessToken(
     token: String //send as "Authorization: Bearer $token"
 )
 object AccessToken {
-  implicit val format = Json.format[AccessToken]
+  implicit val decoder: Decoder[AccessToken] = deriveDecoder
+  implicit val encoder: Encoder[AccessToken] = deriveEncoder
 }
 
 case class Activity(
@@ -31,7 +39,8 @@ case class Activity(
     integration: String
 )
 object Activity {
-  implicit val format = Json.format[Activity]
+  implicit val decoder: Decoder[Activity] = deriveDecoder
+  implicit val encoder: Encoder[Activity] = deriveEncoder
 }
 
 case class Duration(
@@ -41,7 +50,8 @@ case class Duration(
   lazy val asJavaDuration: java.time.Duration = java.time.Duration.between(startedAt, stoppedAt)
 }
 object Duration {
-  implicit val format = Json.format[Duration]
+  implicit val decoder: Decoder[Duration] = deriveDecoder
+  implicit val encoder: Encoder[Duration] = deriveEncoder
 }
 
 case class Tag(
@@ -49,7 +59,8 @@ case class Tag(
     key: String
 )
 object Tag {
-  implicit val format = Json.format[Tag]
+  implicit val decoder: Decoder[Tag] = deriveDecoder
+  implicit val encoder: Encoder[Tag] = deriveEncoder
 }
 
 case class Note(
@@ -57,7 +68,8 @@ case class Note(
     tags: Seq[Tag]
 )
 object Note {
-  implicit val format = Json.format[Note]
+  implicit val decoder: Decoder[Note] = deriveDecoder
+  implicit val encoder: Encoder[Note] = deriveEncoder
 }
 
 case class TimeEntry(
@@ -68,7 +80,8 @@ case class TimeEntry(
     mentions: Option[Seq[Tag]]
 )
 object TimeEntry {
-  implicit val format = Json.format[TimeEntry]
+  implicit val decoder: Decoder[TimeEntry] = deriveDecoder
+  implicit val encoder: Encoder[TimeEntry] = deriveEncoder
 }
 
 case class CurrentTrackingNote(
@@ -77,7 +90,8 @@ case class CurrentTrackingNote(
     mentions: Seq[Tag]
 )
 object CurrentTrackingNote {
-  implicit val format = Json.format[CurrentTrackingNote]
+  implicit val decoder: Decoder[CurrentTrackingNote] = deriveDecoder
+  implicit val encoder: Encoder[CurrentTrackingNote] = deriveEncoder
 }
 
 case class CurrentTracking(
@@ -86,7 +100,8 @@ case class CurrentTracking(
     note: CurrentTrackingNote
 )
 object CurrentTracking {
-  implicit val format = Json.format[CurrentTracking]
+  implicit val decoder: Decoder[CurrentTracking] = deriveDecoder
+  implicit val encoder: Encoder[CurrentTracking] = deriveEncoder
 }
 
 class TimeularApiClient(
@@ -98,13 +113,11 @@ class TimeularApiClient(
   def login(credentials: SigninRequest): ResponseType[LoggedInTimeularApiClient] = {
 
     val response = basicRequest
-      .body(Json.toJson(credentials).toString())
+      .body(credentials.asJson)
       .post(uri"$baseUrl/developer/sign-in")
+      .response(asJson[AccessToken])
       .send()
-    response.body.map { it =>
-      val token = Json.parse(it).as[AccessToken]
-      LoggedInTimeularApiClient(token)
-    }
+    response.body.bimap(_ => "error", LoggedInTimeularApiClient(_))
   }
 }
 object TimeularApiClient {
@@ -128,26 +141,23 @@ class LoggedInTimeularApiClient(
       from: LocalDateTime,
       until: LocalDateTime = LocalDateTime.now()
   ): ResponseType[Seq[TimeEntry]] = {
+    implicit val myDecoder = implicitly[Decoder[Seq[TimeEntry]]].at("timeEntries")
     val response = baseRequest
       .get(uri"$baseUrl/time-entries/${from.format(dateTimeFormatter)}/${until.format(dateTimeFormatter)}")
+      .response(asJson[Seq[TimeEntry]])
       .send()
-    response.body.map { it =>
-      (Json.parse(it) \ "timeEntries").as[Seq[TimeEntry]]
-    }
+    response.body.leftMap(_ => "error")
   }
 
   def timeEntry(id: String): ResponseType[TimeEntry] = {
-    val response = baseRequest.get(uri"$baseUrl/time-entries/$id").send()
-    response.body.map { it =>
-      Json.parse(it).as[TimeEntry]
-    }
+    val response = baseRequest.get(uri"$baseUrl/time-entries/$id").response(asJson[TimeEntry]).send()
+    response.body.leftMap(_ => "error")
   }
 
   def currentTracking(): ResponseType[Option[CurrentTracking]] = {
-    val response = baseRequest.get(uri"$baseUrl/tracking").send()
-    response.body.map { it =>
-      (Json.parse(it) \ "currentTracking").asOpt[CurrentTracking]
-    }
+    implicit val myDecoder = implicitly[Decoder[Option[CurrentTracking]]].at("currentTracking")
+    val response           = baseRequest.get(uri"$baseUrl/tracking").response(asJson[Option[CurrentTracking]]).send()
+    response.body.leftMap(_ => "error")
   }
 }
 

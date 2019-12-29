@@ -13,8 +13,6 @@ import sttp.client.Identity
 import sttp.client.NothingT
 import sttp.client.SttpBackend
 
-import scala.concurrent.Future
-
 object Command extends StrictLogging {
   def apply(cliOptions: CliConfig): Command = {
     import cliOptions._
@@ -31,8 +29,8 @@ object Command extends StrictLogging {
     lazy val apiClient =
       TimeularApiClient(config.timeularServer).login(SigninRequest(config.apiKey, config.apiSecret))
     command match {
-      case Start() => Future.failed(???) //TODO
-      case Stop()  => Future.failed(???) //TODO
+      case Start() => ??? //TODO
+      case Stop()  => ??? //TODO
       case Export(startTime, endTime) =>
         logger.info("exporting data...")
         val data = for {
