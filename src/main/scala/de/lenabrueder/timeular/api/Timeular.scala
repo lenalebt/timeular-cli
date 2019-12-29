@@ -4,16 +4,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import com.typesafe.scalalogging.StrictLogging
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.libs.ws.JsonBodyReadables._
-import play.api.libs.ws.JsonBodyWritables._
-import play.api.libs.ws.StandaloneWSClient
-import play.api.libs.ws.StandaloneWSRequest
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration._
+import sttp.client._
 
 //see timeular API at https://developers.timeular.com/public-api/
 
@@ -99,68 +91,68 @@ object CurrentTracking {
 
 class TimeularApiClient(
     val baseUrl: String
-)(implicit ws: StandaloneWSClient, executionContext: ExecutionContext)
+)(implicit private val backend: SttpBackend[Identity, Nothing, NothingT])
     extends StrictLogging {
-  def login(credentials: SigninRequest): Future[LoggedInTimeularApiClient] =
-    for {
-      response <- ws
-                   .url(s"$baseUrl/developer/sign-in")
-                   .post(Json.toJson(credentials))
-    } yield {
-      val token = response.body[JsValue].as[AccessToken]
+  type ResponseType[T] = Identity[Either[String, T]]
+
+  def login(credentials: SigninRequest): ResponseType[LoggedInTimeularApiClient] = {
+
+    val response = basicRequest
+      .body(Json.toJson(credentials).toString())
+      .post(uri"$baseUrl/developer/sign-in")
+      .send()
+    response.body.map { it =>
+      val token = Json.parse(it).as[AccessToken]
       LoggedInTimeularApiClient(token)
     }
+  }
 }
 object TimeularApiClient {
   val baseUrl = "https://api.timeular.com/api/v2"
 
-  def apply(baseUrl: String = baseUrl)(implicit ws: StandaloneWSClient,
-                                       executionContext: ExecutionContext): TimeularApiClient =
+  def apply(baseUrl: String = baseUrl)(implicit backend: SttpBackend[Identity, Nothing, NothingT]): TimeularApiClient =
     new TimeularApiClient(baseUrl)
 }
 class LoggedInTimeularApiClient(
     val accessToken: AccessToken,
     val baseUrl: String
-)(implicit ws: StandaloneWSClient, executionContext: ExecutionContext)
+)(implicit private val backend: SttpBackend[Identity, Nothing, NothingT])
     extends StrictLogging {
+  type ResponseType[T] = Identity[Either[String, T]]
+
   val dateTimeFormatter =
     DateTimeFormatter.ofPattern("YYYY-MM-dd'T'HH:mm:ss.SSS")
-  implicit class WithAuth(val ws: StandaloneWSRequest) {
-    def withAuth() = ws.withHttpHeaders("Authorization" -> s"Bearer ${accessToken.token}")
-  }
+  val baseRequest = basicRequest.auth.bearer(accessToken.token)
 
   def timeEntries(
       from: LocalDateTime,
       until: LocalDateTime = LocalDateTime.now()
-  ): Future[Seq[TimeEntry]] = {
-    for {
-      response <- ws
-                   .url(s"$baseUrl/time-entries/${from.format(dateTimeFormatter)}/${until.format(dateTimeFormatter)}")
-                   .withAuth()
-                   .get()
-    } yield {
-      (response.body[JsValue] \ "timeEntries").as[Seq[TimeEntry]]
+  ): ResponseType[Seq[TimeEntry]] = {
+    val response = baseRequest
+      .get(uri"$baseUrl/time-entries/${from.format(dateTimeFormatter)}/${until.format(dateTimeFormatter)}")
+      .send()
+    response.body.map { it =>
+      (Json.parse(it) \ "timeEntries").as[Seq[TimeEntry]]
     }
   }
 
-  def timeEntry(id: String): Future[TimeEntry] =
-    for {
-      response <- ws.url(s"$baseUrl/time-entries/$id").withAuth().get()
-    } yield {
-      response.body[JsValue].as[TimeEntry]
+  def timeEntry(id: String): ResponseType[TimeEntry] = {
+    val response = baseRequest.get(uri"$baseUrl/time-entries/$id").send()
+    response.body.map { it =>
+      Json.parse(it).as[TimeEntry]
     }
+  }
 
-  def currentTracking(): Future[Option[CurrentTracking]] =
-    for {
-      response <- ws.url(s"$baseUrl/tracking").withAuth().get()
-    } yield {
-      (response.body[JsValue] \ "currentTracking").asOpt[CurrentTracking]
+  def currentTracking(): ResponseType[Option[CurrentTracking]] = {
+    val response = baseRequest.get(uri"$baseUrl/tracking").send()
+    response.body.map { it =>
+      (Json.parse(it) \ "currentTracking").asOpt[CurrentTracking]
     }
+  }
 }
 
 object LoggedInTimeularApiClient {
   def apply(accessToken: AccessToken, baseUrl: String = TimeularApiClient.baseUrl)(
-      implicit ws: StandaloneWSClient,
-      executionContext: ExecutionContext): LoggedInTimeularApiClient =
+      implicit backend: SttpBackend[Identity, Nothing, NothingT]): LoggedInTimeularApiClient =
     new LoggedInTimeularApiClient(accessToken, baseUrl)
 }

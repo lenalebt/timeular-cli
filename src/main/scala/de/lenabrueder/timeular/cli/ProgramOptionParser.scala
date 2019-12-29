@@ -4,6 +4,9 @@ import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+import cats._
+import cats.implicits._
+
 import scopt.Read
 
 import scala.util.Try
@@ -51,7 +54,7 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
           .action((x, c) => c.copy(command = Some("export")))
           .text("stop tracking an activity")
           .children(
-            opt[LocalDateTime]("start-time")(localDateTimeRead(false))
+            opt[LocalDateTime]("start-time")(localDateTimeRead(false)) //TODO: validation, start-time must be before end-time
               .action((x, c) => c.copy(startTime = Some(x)))
               .text("Start time of when the export starts."),
             opt[LocalDateTime]("end-time")(localDateTimeRead(true))

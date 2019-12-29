@@ -15,7 +15,7 @@ case class CliConfig(
     apiKey: Option[String] = None,
     apiSecret: Option[String] = None,
     outputType: Option[String] = None,
-    outputFile: Option[File] = None,
+    outputFile: Option[File] = Some(new File("timeular-export.xls")),
     timeularServer: Option[String] = None,
     command: Option[String] = None,
     startTime: Option[LocalDateTime] = None,
