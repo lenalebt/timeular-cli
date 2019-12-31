@@ -2,22 +2,22 @@ package de.lenabrueder.timeular.cli
 
 import java.io.File
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.OffsetDateTime
 
 import cats._
 import cats.implicits._
-
 import scopt.Read
 
 import scala.util.Try
 
 object ProgramOptionParser extends ((Array[String], Map[String, String]) => Option[Config]) {
-  implicit def localDateTimeRead(useEndOfDay: Boolean): Read[LocalDateTime] = new Read[LocalDateTime] {
+  implicit def localDateTimeRead(useEndOfDay: Boolean): Read[OffsetDateTime] = new Read[OffsetDateTime] {
     override def arity: Int = 5
-    override def reads: String => LocalDateTime =
+    override def reads: String => OffsetDateTime =
       x =>
-        Try(LocalDateTime.parse(x)).orElse {
-          lazy val date = LocalDate.parse(x).atStartOfDay()
+        Try(OffsetDateTime.parse(x)).orElse {
+          lazy val date = LocalDate.parse(x).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime
           Try(if (useEndOfDay) { date.plusDays(1).minusSeconds(1) } else { date })
         }.get
   }
@@ -38,28 +38,44 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
         opt[String]("api-server")
           .action((x, c) => c.copy(timeularServer = Some(x)))
           .text("The timeular API server."),
-        opt[String]('f', "output-format")
+        opt[String]('o', "output-format")
           .action((x, c) => c.copy(outputType = Some(x)))
           .text("The output format to be used."),
-        opt[File]('o', "output-file")
+        opt[File]('f', "output-file")
           .action((x, c) => c.copy(outputFile = Some(x)))
-          .text("The file to export to. Skip for writing to stdout."),
+          .text("The file to export to. Skip for writing to stdout. " +
+            "Writing to stdout for binary formats (such as xls) is currently not supported."),
+        opt[Map[String, String]]('k', "output-options")
+          .action((x, c) => c.copy(outputOptions = Some(x)))
+          .text("The output options for the format. Depends on the specific output format. Try e.g. 'report=true'"),
         cmd("start")
           .action((x, c) => c.copy(command = Some("start")))
-          .text("start tracking an activity"),
+          .text("start tracking an activity")
+          .children(arg[String]("activity").action((x, c) => c.copy(activity = Some(x)))),
         cmd("stop")
           .action((x, c) => c.copy(command = Some("stop")))
-          .text("stop tracking an activity"),
+          .text("stop tracking an activity")
+          .children(arg[String]("activity").action((x, c) => c.copy(activity = Some(x))).optional()),
+        cmd("list-activities")
+          .action((x, c) => c.copy(command = Some("list-activities")))
+          .text("list the activities known to timeular"),
         cmd("export")
           .action((x, c) => c.copy(command = Some("export")))
           .text("stop tracking an activity")
           .children(
-            opt[LocalDateTime]("start-time")(localDateTimeRead(false)) //TODO: validation, start-time must be before end-time
+            opt[OffsetDateTime]("start-time")(localDateTimeRead(false))
               .action((x, c) => c.copy(startTime = Some(x)))
               .text("Start time of when the export starts."),
-            opt[LocalDateTime]("end-time")(localDateTimeRead(true))
+            opt[OffsetDateTime]("end-time")(localDateTimeRead(true))
               .action((x, c) => c.copy(endTime = Some(x)))
-              .text("End time of when the export ends.")
+              .text("End time of when the export ends."),
+            checkConfig { cfg =>
+              val startTimeBeforeEndTime = (for {
+                startTime <- cfg.startTime
+                endTime   <- cfg.endTime
+              } yield startTime.isBefore(endTime)).getOrElse(true)
+              if (startTimeBeforeEndTime) Right(()) else Left("'start-time' must be before 'end-time'!")
+            }
           )
       )
     }

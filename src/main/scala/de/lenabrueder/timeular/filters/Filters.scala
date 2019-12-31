@@ -11,12 +11,19 @@ import de.lenabrueder.timeular.api.TimeEntry
 import scala.concurrent.duration._
 
 /**
-  * Contains filters that can be applied to lists of entries
+  * Contains filters that can be applied to lists of entries.
+  *
+  * The config parameters should go to a config file some time to allow for very generic reports.
   */
-object Filters {
+class Filters(val dailyWorkTarget: Duration) {
   val weekDays = Seq(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+  val workDays = weekDays
 
-  def isWeekday(localDate: LocalDate) =
+  def isWeekday(localDate: LocalDate): Boolean =
+    weekDays.contains(localDate.getDayOfWeek)
+
+  //TODO: this function should be injected, since it can be quite complicated (e.g.: holidays or work shifts)
+  def isWorkday(localDate: LocalDate): Boolean =
     weekDays.contains(localDate.getDayOfWeek)
 
   def thisWeek(localDate: LocalDate): Boolean = {
@@ -53,21 +60,24 @@ object Filters {
   def daysAgo(days: Int)(entries: Seq[TimeEntry]): Seq[TimeEntry] =
     entries.filter(el => daysAgo(days, el.duration.startedAt.toLocalDate))
 
-  def overtime(entries: Seq[TimeEntry]) = {
+  def overtime(entries: Seq[TimeEntry]): Duration = {
     val daysWorked = entries.map(_.duration.startedAt.toLocalDate).distinct
 
-    val targetHours = (daysWorked.count(isWeekday) * 7.6).hours
-    val workedTime  = timeWorked(entries)
-    workedTime - targetHours
+    //This one accommodates for days where you maybe work an hour, but it is e.g. a weekend.
+    //This hour will not be forgotten, but it will not count that day as a regular work day either.
+    //This does not work for holidays, but it does for an occasional hour of work on the weekend.
+    val targetTime = daysWorked.count(isWorkday) * dailyWorkTarget
+    val workedTime = timeWorked(entries)
+    workedTime - targetTime
   }
 
-  def daysWorked(entries: Seq[TimeEntry]) =
+  def daysWorked(entries: Seq[TimeEntry]): Int =
     entries.map(_.duration.startedAt.toLocalDate).distinct.size
 
-  def weekDaysWorked(entries: Seq[TimeEntry]) =
+  def weekDaysWorked(entries: Seq[TimeEntry]): Int =
     entries.map(_.duration.startedAt.toLocalDate).distinct.count(isWeekday)
 
-  def timeWorked(entries: Seq[TimeEntry]) =
+  def timeWorked(entries: Seq[TimeEntry]): FiniteDuration =
     entries
       .map(_.duration.asJavaDuration)
       .fold(java.time.Duration.ZERO) {

@@ -1,4 +1,4 @@
-package de.lenabrueder.timeular.`export`
+package de.lenabrueder.timeular.report
 
 import java.io.ByteArrayOutputStream
 import java.time.DayOfWeek
@@ -6,15 +6,16 @@ import java.time.LocalTime
 
 import com.typesafe.scalalogging.StrictLogging
 import de.lenabrueder.timeular.api.TimeEntry
+import de.lenabrueder.timeular.filters.Filters
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
-import de.lenabrueder.timeular.filters.Filters._
+
+import scala.concurrent.duration._
 
 /**
   * Exports to Excel in the format the SAP GUI wants to see
   */
-object SAPGuiExcelExport extends StrictLogging {
-
-  import scala.concurrent.duration._
+class SAPGuiExcelReport(val filters: Filters) extends Report[Array[Byte]] with StrictLogging {
+  import filters._
 
   def lunchBreakTimeForWorkTime(workTime: Duration): Duration = workTime match {
     case _ if workTime < 6.hours  => 0.minutes

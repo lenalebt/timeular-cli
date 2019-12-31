@@ -17,7 +17,13 @@ object Main extends App with StrictLogging {
   optConfig match {
     case Some(config) =>
       implicit val cfg = config
-      Command.run(config.command)
+      Command
+        .run(config.command)
+        .left
+        .foreach { error =>
+          logger.error(error)
+          System.exit(2)
+        }
     case None => System.exit(1)
   }
 }

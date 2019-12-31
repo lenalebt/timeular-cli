@@ -1,7 +1,7 @@
 package de.lenabrueder.timeular.cli
 
 import java.io.File
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 import com.typesafe.scalalogging.StrictLogging
 import de.lenabrueder.timeular.cli.CliConfig.OutputType
@@ -15,15 +15,18 @@ case class CliConfig(
     apiKey: Option[String] = None,
     apiSecret: Option[String] = None,
     outputType: Option[String] = None,
-    outputFile: Option[File] = Some(new File("timeular-export.xls")),
+    outputFile: Option[File] = None,
+    outputOptions: Option[Map[String, String]] = None,
     timeularServer: Option[String] = None,
     command: Option[String] = None,
-    startTime: Option[LocalDateTime] = None,
-    endTime: Option[LocalDateTime] = None
+    startTime: Option[OffsetDateTime] = None,
+    endTime: Option[OffsetDateTime] = None,
+    activity: Option[String] = None
 )
 case class OutputOptions(
     file: Option[File],
-    `type`: OutputType
+    `type`: OutputType,
+    options: Map[String, String]
 )
 case class Config(
     apiKey: String,
@@ -45,7 +48,8 @@ object Config extends StrictLogging {
       command = Command(cliConfig),
       outputOptions = OutputOptions(
         file = outputFile,
-        `type` = outputType.getOrElse("xls")
+        `type` = outputType.getOrElse("text"),
+        options = outputOptions.getOrElse(Map.empty)
       )
     )
   }
