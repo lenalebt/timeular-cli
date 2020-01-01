@@ -76,7 +76,12 @@ object ProgramOptionParser extends ((Array[String], Map[String, String]) => Opti
               } yield startTime.isBefore(endTime)).getOrElse(true)
               if (startTimeBeforeEndTime) Right(()) else Left("'start-time' must be before 'end-time'!")
             }
-          )
+          ),
+        checkConfig(cfg =>
+          cfg.command match {
+            case Some(_) => Right(())
+            case None    => Left("you need to supply a command")
+        })
       )
     }
 

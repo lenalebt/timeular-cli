@@ -1,11 +1,18 @@
 name := """timeular-cli"""
 
-version := "1.0-SNAPSHOT"
+version := "0.1-SNAPSHOT"
 
 scalaVersion := "2.13.1"
 
-//TODO: there is more; debian, windows, ...
-enablePlugins(DockerPlugin)
+maintainer := "Lena Brüder <oss@lena-brueder.de>"
+
+enablePlugins(JavaAppPackaging)
+mainClass in Compile := Some("de.lenabrueder.timeular.Main")
+discoveredMainClasses in Compile := Seq()
+
+//TODO: this one needs more configuration and an oracle JDK8
+//see https://www.scala-sbt.org/sbt-native-packager/formats/jdkpackager.html
+enablePlugins(JDKPackagerPlugin)
 
 val catsVersion   = "2.0.0"
 val circeVersion  = "0.12.3"
