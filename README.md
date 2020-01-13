@@ -7,7 +7,7 @@ that is fed by your [Timeular](https://timeular.com) device.
 
 either set the `TIMEULAR_API_KEY` and `TIMEULAR_API_SECRET` environment variables, or supply `--api-key` or `--api-secret` cli params.
 
-Full usage instructions:
+Full usage instructions (get them by calling the application without any parameters):
 
 ```
 Usage: timeular-cli [start|stop|list-activities|export] [options] <args>...

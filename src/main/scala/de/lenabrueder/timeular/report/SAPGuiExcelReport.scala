@@ -3,6 +3,7 @@ package de.lenabrueder.timeular.report
 import java.io.ByteArrayOutputStream
 import java.time.DayOfWeek
 import java.time.LocalTime
+import java.util.Locale
 
 import com.typesafe.scalalogging.StrictLogging
 import de.lenabrueder.timeular.api.TimeEntry
@@ -31,9 +32,10 @@ class SAPGuiExcelReport(val filters: Filters) extends Report[Array[Byte]] with S
 
   val days = DayOfWeek.values().toSeq.map(_.toString)
   def formatDuration(d: Duration): String = {
-    val hours   = d.toHours
-    val minutes = (d - hours.hours).toMinutes
-    f"$hours:$minutes%02d"
+    val hours                   = d.toHours
+    val minutes                 = (d - hours.hours).toMinutes
+    val hourWithMinutesFraction = hours.toDouble + minutes / 60.0
+    "%.2f".formatLocal(Locale.GERMANY, hourWithMinutesFraction)
   }
 
   def create(entries: Seq[TimeEntry]) = {
