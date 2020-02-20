@@ -3,6 +3,7 @@ package de.lenabrueder.timeular.report
 import java.io.ByteArrayOutputStream
 import java.time.DayOfWeek
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Locale
 
 import com.typesafe.scalalogging.StrictLogging
@@ -28,6 +29,16 @@ class SAPGuiExcelReport(val filters: Filters) extends Report[Array[Byte]] with S
   def roundWorkingTime(time: Duration): Duration = {
     //+7 is for rounding because it'd round down in all cases without it
     (((time.toMinutes + 7) / 15) * 15).minutes
+  }
+
+  def roundTime(time: LocalTime): LocalTime = {
+    time.getMinute match {
+      case m if m < 0 + 7  => time.withMinute(0)
+      case m if m < 15 + 7 => time.withMinute(15)
+      case m if m < 30 + 7 => time.withMinute(30)
+      case m if m < 45 + 7 => time.withMinute(45)
+      case _               => time.plusHours(1).withMinute(0)
+    }
   }
 
   val days = DayOfWeek.values().toSeq.map(_.toString)
@@ -67,8 +78,9 @@ class SAPGuiExcelReport(val filters: Filters) extends Report[Array[Byte]] with S
         val attendanceTime = workTime + lunchBreakTime
 
         val topLeftCellXCoord = dayOfWeek.ordinal() * 3
-        val startTime         = LocalTime.of(8, 0)
-        val endTime           = startTime.plus(java.time.Duration.ofMinutes(attendanceTime.toMinutes))
+        val startTime = roundTime(
+          entries.map(_.duration.startedAt).min.atZoneSameInstant(ZoneId.of("Europe/Berlin")).toLocalTime)
+        val endTime = startTime.plus(java.time.Duration.ofMinutes(attendanceTime.toMinutes))
 
         attendanceTimeRow.createCell(topLeftCellXCoord).setCellValue(formatDuration(attendanceTime))
         attendanceTimeRow.createCell(topLeftCellXCoord + 1).setCellValue(startTime.toString)
