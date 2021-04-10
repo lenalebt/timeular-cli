@@ -40,7 +40,7 @@ object XlsSapCatsReportFormat extends OutputFormat[Array[Byte], Encoder] {
     case seq: Seq[Any] =>
       seq.headOption match {
         case Some(_: TimeEntry) =>
-          new SAPGuiExcelReport(new Filters(7.6.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
+          new SAPGuiExcelReport(new Filters(8.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
         case _ => throw new IllegalArgumentException("cannot process this with SAP-CATS-Export!")
       }
     case _ => throw new IllegalArgumentException("cannot process this with SAP-CATS-Export!")
@@ -134,7 +134,7 @@ object TextFormatReport extends OutputFormat[String, Show] {
   override def apply[T](t: T)(implicit encoderFormat: Show[T]): String = t match {
     case seq: Seq[Any] =>
       seq.headOption match {
-        case Some(_: TimeEntry) => new TextReport(new Filters(7.6.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
+        case Some(_: TimeEntry) => new TextReport(new Filters(8.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
         case _                  => throw new IllegalArgumentException("cannot process this with text report!")
       }
     case _ => throw new IllegalArgumentException("cannot process this with text report!")
