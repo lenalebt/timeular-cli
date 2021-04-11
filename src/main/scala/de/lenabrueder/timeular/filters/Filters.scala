@@ -5,9 +5,10 @@ import java.time.temporal.WeekFields
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-
+import de.lenabrueder.timeular.api.Tag
 import de.lenabrueder.timeular.api.TimeEntry
 
+import java.util.UUID
 import scala.concurrent.duration._
 
 /**
@@ -15,16 +16,15 @@ import scala.concurrent.duration._
   *
   * The config parameters should go to a config file some time to allow for very generic reports.
   */
-class Filters(val dailyWorkTarget: Duration) {
+class Filters(val dailyWorkTarget: Duration, val holidayTagId: Option[UUID], val workDays: Seq[DayOfWeek]) {
   val weekDays = Seq(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
-  val workDays = weekDays
 
   def isWeekday(localDate: LocalDate): Boolean =
     weekDays.contains(localDate.getDayOfWeek)
 
   //TODO: this function should be injected, since it can be quite complicated (e.g.: holidays or work shifts)
   def isWorkday(localDate: LocalDate): Boolean =
-    weekDays.contains(localDate.getDayOfWeek)
+    workDays.contains(localDate.getDayOfWeek)
 
   def thisWeek(localDate: LocalDate): Boolean = {
     val now = LocalDate.now
@@ -61,12 +61,16 @@ class Filters(val dailyWorkTarget: Duration) {
     entries.filter(el => daysAgo(days, el.duration.startedAt.toLocalDate))
 
   def overtime(entries: Seq[TimeEntry]): Duration = {
-    val daysWorked = entries.map(_.duration.startedAt.toLocalDate).distinct
+    def isNormalWorkday(timeEntry: TimeEntry) =
+      isWorkday(timeEntry.duration.startedAt.toLocalDate) && !timeEntry.note.tags
+        .map(_.key)
+        .contains(holidayTagId.getOrElse(UUID.randomUUID()).toString)
+    val normalWorkDaysWorked = entries.filter(isNormalWorkday).map(_.duration.startedAt.toLocalDate).distinct
 
     //This one accommodates for days where you maybe work an hour, but it is e.g. a weekend.
     //This hour will not be forgotten, but it will not count that day as a regular work day either.
     //This does not work for holidays, but it does for an occasional hour of work on the weekend.
-    val targetTime = daysWorked.count(isWorkday) * dailyWorkTarget
+    val targetTime = normalWorkDaysWorked.size * dailyWorkTarget
     val workedTime = timeWorked(entries)
     workedTime - targetTime
   }

@@ -1,10 +1,15 @@
 package de.lenabrueder.timeular.cli
 
 import java.io.File
+import java.time.DayOfWeek
 import java.time.OffsetDateTime
-
 import com.typesafe.scalalogging.StrictLogging
+import de.lenabrueder.timeular.api.Duration
 import de.lenabrueder.timeular.cli.CliConfig.OutputType
+
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration
 
 object CliConfig {
   //TODO: this should work with some kind of plugin system, or maybe highly configurable
@@ -21,7 +26,11 @@ case class CliConfig(
     command: Option[String] = None,
     startTime: Option[OffsetDateTime] = None,
     endTime: Option[OffsetDateTime] = None,
-    activity: Option[String] = None
+    activity: Option[String] = None,
+    holidayTagId: Option[UUID] = None,
+    dailyWorkTarget: Option[Double] = None,
+    workDays: Seq[DayOfWeek] =
+      Seq(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
 )
 case class OutputOptions(
     file: Option[File],
@@ -33,7 +42,10 @@ case class Config(
     apiSecret: String,
     timeularServer: String,
     command: Command,
-    outputOptions: OutputOptions
+    outputOptions: OutputOptions,
+    dailyWorkTarget: duration.Duration,
+    holidayTagId: Option[UUID],
+    workDays: Seq[DayOfWeek]
 )
 object Config extends StrictLogging {
   val defaultTimeularServer = "https://api.timeular.com/api/v2"
@@ -50,7 +62,10 @@ object Config extends StrictLogging {
         file = outputFile,
         `type` = outputType.getOrElse("text"),
         options = outputOptions.getOrElse(Map.empty)
-      )
+      ),
+      dailyWorkTarget = duration.Duration.apply(cliConfig.dailyWorkTarget.getOrElse(8.0), TimeUnit.HOURS),
+      holidayTagId = cliConfig.holidayTagId,
+      workDays = cliConfig.workDays
     )
   }
 }

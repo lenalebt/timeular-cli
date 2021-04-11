@@ -13,6 +13,9 @@ import io.circe.Encoder
 import io.circe.Json
 import io.circe.yaml._
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
+
+import java.time.DayOfWeek
+import java.util.UUID
 import scala.concurrent.duration._
 
 sealed trait OutputFormat[OutputFormat, EncoderFormat[_]] {
@@ -29,18 +32,27 @@ object OutputFormat {
     config.outputOptions.`type`.toLowerCase match {
       case "json"         => Right(JsonFormat.apply(data))
       case "yaml" | "yml" => Right(YamlFormat.apply(data))
-      case "xls"          => Left(XlsFormat(config.outputOptions.options).apply(data))
-      case "csv"          => Right(CsvFormat.apply(data))
-      case "text"         => Right(TextFormat(config.outputOptions.options).apply(data))
+      case "xls" =>
+        Left(
+          XlsFormat(config.outputOptions.options, config.dailyWorkTarget, config.holidayTagId, config.workDays)
+            .apply(data)
+        )
+      case "csv" => Right(CsvFormat.apply(data))
+      case "text" =>
+        Right(
+          TextFormat(config.outputOptions.options, config.dailyWorkTarget, config.holidayTagId, config.workDays)
+            .apply(data)
+        )
     }
 }
 
-object XlsSapCatsReportFormat extends OutputFormat[Array[Byte], Encoder] {
+class XlsSapCatsReportFormat(dailyWorkTarget: Duration, workDays: Seq[DayOfWeek])
+    extends OutputFormat[Array[Byte], Encoder] {
   override def apply[T](t: T)(implicit identity: Encoder[T]): Array[Byte] = t match {
     case seq: Seq[Any] =>
       seq.headOption match {
         case Some(_: TimeEntry) =>
-          new SAPGuiExcelReport(new Filters(8.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
+          new SAPGuiExcelReport(new Filters(dailyWorkTarget, None, workDays)).create(seq.asInstanceOf[Seq[TimeEntry]])
         case _ => throw new IllegalArgumentException("cannot process this with SAP-CATS-Export!")
       }
     case _ => throw new IllegalArgumentException("cannot process this with SAP-CATS-Export!")
@@ -72,9 +84,14 @@ class XlsFormat extends OutputFormat[Array[Byte], Encoder] {
   }
 }
 object XlsFormat {
-  def apply(options: Map[String, String]): OutputFormat[Array[Byte], Encoder] = {
+  def apply(
+      options: Map[String, String],
+      dailyWorkTarget: Duration,
+      holidayTagId: Option[UUID],
+      workDays: Seq[DayOfWeek]
+  ): OutputFormat[Array[Byte], Encoder] = {
     options.get("report") match {
-      case Some("sap" | "sap-cats" | "true") => XlsSapCatsReportFormat
+      case Some("sap" | "sap-cats" | "true") => new XlsSapCatsReportFormat(dailyWorkTarget, workDays)
       case None | _                          => new XlsFormat
     }
   }
@@ -130,20 +147,27 @@ object YamlFormat extends OutputFormat[String, Encoder] {
 class TextFormat extends OutputFormat[String, Show] {
   override def apply[T](t: T)(implicit show: Show[T]): String = show.show(t)
 }
-object TextFormatReport extends OutputFormat[String, Show] {
+class TextFormatReport(dailyWorkTarget: Duration, holidayTagId: Option[UUID], workDays: Seq[DayOfWeek])
+    extends OutputFormat[String, Show] {
   override def apply[T](t: T)(implicit encoderFormat: Show[T]): String = t match {
     case seq: Seq[Any] =>
       seq.headOption match {
-        case Some(_: TimeEntry) => new TextReport(new Filters(8.hours)).create(seq.asInstanceOf[Seq[TimeEntry]])
-        case _                  => throw new IllegalArgumentException("cannot process this with text report!")
+        case Some(_: TimeEntry) =>
+          new TextReport(new Filters(dailyWorkTarget, holidayTagId, workDays)).create(seq.asInstanceOf[Seq[TimeEntry]])
+        case _ => throw new IllegalArgumentException("cannot process this with text report!")
       }
     case _ => throw new IllegalArgumentException("cannot process this with text report!")
   }
 }
 object TextFormat {
-  def apply(options: Map[String, String]): OutputFormat[String, Show] = {
+  def apply(
+      options: Map[String, String],
+      dailyWorkTarget: Duration,
+      holidayTagId: Option[UUID],
+      workDays: Seq[DayOfWeek]
+  ): OutputFormat[String, Show] = {
     options.get("report") match {
-      case Some("true") => TextFormatReport
+      case Some("true") => new TextFormatReport(dailyWorkTarget, holidayTagId, workDays)
       case None | _     => new TextFormat
     }
   }

@@ -2,7 +2,7 @@ name := """timeular-cli"""
 
 version := "0.3-SNAPSHOT"
 
-scalaVersion := "2.13.1"
+scalaVersion := "2.13.5"
 
 maintainer := "Lena Brüder <oss@lena-brueder.de>"
 
@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   "com.github.alexarchambault" %% "scalacheck-shapeless_1.14" % "1.2.3"
 ).map(_ % "test")
 
-fork in run := true
+fork / run := true
 
 dockerBaseImage := "openjdk:11"
 dockerUpdateLatest := true
